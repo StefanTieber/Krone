@@ -6,6 +6,8 @@ import javax.mail.internet.MimeMultipart;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -18,6 +20,7 @@ public class Main {
 
     public static ScheduledExecutorService scheduler;
     public static Clipboard clipboard;
+    public static DateTimeFormatter formatter;
     public static Session session;
 
     public static String currentSong;
@@ -25,6 +28,7 @@ public class Main {
     public static void main(String[] args) {
         scheduler = Executors.newScheduledThreadPool(1);
         clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        formatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss");
 
         Properties prop = new Properties();
         prop.put("mail.smtp.host", "smtp.gmail.com");
@@ -44,25 +48,18 @@ public class Main {
     }
 
     private static void krone() {
+        String timestamp = LocalDateTime.now().format(formatter);
+
         List<String> lines = readClipboard();
-        if (lines.size() < 2) {
-            System.out.println("could not resolve");
-            return;
-        }
+        String song = parseSong(lines);
 
-        //Hang tight - Expanding search
+        if (!song.equals(currentSong)) {
+            currentSong = song;
 
-        String song = lines.get(0);
-        String artist = lines.get(1);
-        String combined = artist + " - " + song;
+            System.out.println(timestamp + " " + song);
 
-        if (!combined.equals(currentSong)) {
-            currentSong = combined;
-
-            System.out.println(currentSong);
-
-            if (isRelevantSong(artist, song)) {
-                sendEmail(currentSong);
+            if (isRelevantSong(song)) {
+                sendEmail(song);
             }
         }
     }
@@ -81,10 +78,34 @@ public class Main {
         return List.of();
     }
 
-    private static boolean isRelevantSong(String artist, String song) {
-        return artist.matches("(?i).*Ed\\s+Sheeran.*") && song.matches("(?i).*Shivers.*")
-                || artist.matches("(?i).*Robin\\s+Schulz.*") && song.matches("(?i).*Young\\s+Right\\s+Now.*")
-                || artist.matches("(?i).*Shakira.*") && song.matches("(?i).*Whenever\\W+Wherever.*");
+    private static String parseSong(List<String> lines) {
+        if (lines.size() < 3) {
+            return "no result";
+        }
+
+        if (lines.get(0).equals("Expanding search") && lines.get(1).equals("Hang tight")) {
+            return "Shazam: no result";
+        }
+
+        if (lines.get(0).matches("(?i)kronehit\\s+ukw")) {
+            String artist = lines.get(1);
+            String song = lines.get(2);
+            return "Web: " + artist + " --- " + song;
+        }
+
+        if (lines.get(2).matches("(?i).*Shazam.*")) {
+            String artist = lines.get(1);
+            String song = lines.get(0);
+            return "Shazam: " + artist + " --- " + song;
+        }
+
+        return "no result";
+    }
+
+    private static boolean isRelevantSong(String song) {
+        return song.matches("(?i).*Ed\\s+Sheeran.*---.*Shivers.*")
+                || song.matches("(?i).*Robin\\s+Schulz.*---.*Young\\s+Right\\s+Now.*")
+                || song.matches("(?i).*Shakira.*---.*Whenever\\W+Wherever.*");
     }
 
     private static void sendEmail(String song) {
