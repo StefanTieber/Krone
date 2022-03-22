@@ -1,7 +1,7 @@
 SetTitleMatchMode RegEx
 
 <^#!s::
-	SetTimer, Poll, 10000
+	SetTimer, Poll, 15000
 	ToolTip, Script running
 	SetTimer, RemoveToolTip, -1000
 Return
