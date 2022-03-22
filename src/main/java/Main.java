@@ -83,6 +83,11 @@ public class Main {
             return "no result";
         }
 
+        //Couldn't quite catch that
+        //
+        //Please try again
+        //
+        //CANCELTRY AGAIN
         if (lines.get(0).equals("Expanding search") && lines.get(1).equals("Hang tight")) {
             return "Shazam: no result";
         }
